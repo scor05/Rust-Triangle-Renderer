@@ -10,8 +10,8 @@ use raylib::prelude::*;
 use std::f32::consts::PI;
 
 const MODEL_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/obj/nave.obj");
-const MOVE_SPEED: f32 = 2.0;
-const ROT_SPEED: f32 = PI / 10.0;
+const MOVE_SPEED: f32 = 0.1;
+const ROT_SPEED: f32 = PI / 100.0;
 
 fn triangle(framebuffer: &mut Framebuffer, t1: Vector3, t2: Vector3, t3: Vector3) {
     line(framebuffer, t1, t2);
@@ -52,9 +52,9 @@ fn transform(
     if rotation.y != 0.0 {
         let (sin_theta, cos_theta) = rotation.y.sin_cos();
         let rot_matrix: Vec<Vector3> = vec![
+            Vector3::new(cos_theta, 0.0, sin_theta),
             Vector3::new(0.0, 1.0, 0.0),
-            Vector3::new(cos_theta, 0.0, -sin_theta),
-            Vector3::new(sin_theta, 0.0, cos_theta),
+            Vector3::new(-sin_theta, 0.0, cos_theta),
         ];
         new_vertex = matrix_mult(rot_matrix, new_vertex);
     }
@@ -62,9 +62,9 @@ fn transform(
     if rotation.z != 0.0 {
         let (sin_theta, cos_theta) = rotation.z.sin_cos();
         let rot_matrix: Vec<Vector3> = vec![
-            Vector3::new(0.0, 0.0, 1.0),
             Vector3::new(cos_theta, -sin_theta, 0.0),
             Vector3::new(sin_theta, cos_theta, 0.0),
+            Vector3::new(0.0, 0.0, 1.0),
         ];
 
         new_vertex = matrix_mult(rot_matrix, new_vertex);
@@ -112,10 +112,10 @@ fn main() {
             translation.x -= MOVE_SPEED;
         }
         if window.is_key_down(KeyboardKey::KEY_DOWN) {
-            translation.y += MOVE_SPEED;
+            translation.y -= MOVE_SPEED;
         }
         if window.is_key_down(KeyboardKey::KEY_UP) {
-            translation.y -= MOVE_SPEED;
+            translation.y += MOVE_SPEED;
         }
 
         if window.is_key_pressed(KeyboardKey::KEY_Q) {

@@ -1,7 +1,7 @@
 use obj::{Obj, ObjError};
-use std::path::Path;
 use raylib::prelude::Vector3;
 use std::collections::HashSet;
+use std::path::Path;
 
 pub struct Model {
     pub vertices: Vec<Vector3>,
@@ -20,20 +20,13 @@ impl Model {
             .data
             .position
             .iter()
-            .map(|pos| {
-                Vector3::new(
-                    pos[0],
-                    pos[1],
-                    pos[2],
-                )
-            })
+            .map(|pos| Vector3::new(pos[0], pos[1], pos[2]))
             .collect();
-        
+
         assert!(!vertices.is_empty(), "OBJ has no vertices.");
 
         let center = Self::get_center(&vertices);
         let edges = Self::get_edges(&obj);
-
 
         Self {
             vertices,
@@ -41,22 +34,21 @@ impl Model {
             center,
         }
     }
-   
- 
+
     pub fn get_center(vertices: &Vec<Vector3>) -> Vector3 {
         let mut maximum = vertices[0];
         let mut minimum = vertices[0];
 
         for v in &vertices[1..] {
             maximum.x = maximum.x.max(v.x);
-            maximum.y = maximum.x.max(v.y);
-            maximum.z = maximum.x.max(v.z);
+            maximum.y = maximum.y.max(v.y);
+            maximum.z = maximum.z.max(v.z);
 
             minimum.x = minimum.x.min(v.x);
-            minimum.y = minimum.x.min(v.y);
-            minimum.z = minimum.x.min(v.z);
+            minimum.y = minimum.y.min(v.y);
+            minimum.z = minimum.z.min(v.z);
         }
-        
+
         (maximum + minimum) * 0.5
     }
 
@@ -77,10 +69,7 @@ impl Model {
                         let second = indices[(index + 1) % indices.len()].0;
 
                         // guardar índice más pequeño
-                        let edge = (
-                            first.min(second),
-                            first.max(second),
-                        );
+                        let edge = (first.min(second), first.max(second));
 
                         edges.insert(edge);
                     }
@@ -90,5 +79,4 @@ impl Model {
 
         edges
     }
-
 }
