@@ -31,7 +31,7 @@ cargo run
 ```
 
 Y al ejecutar eso se debería de ver una ventana con el modelo .obj similar a esta:
-
+<img width="1600" height="863" alt="image" src="https://github.com/user-attachments/assets/2b9acddb-43c8-46b6-ab8f-8794149b9be0" />
 
 ## Controles
 
