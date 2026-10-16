@@ -224,6 +224,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "obj"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "059c95245738cdc7b40078cdd51a23200252a4c0a0a6dd005136152b3f467a4a"
+
+[[package]]
 name = "prettyplease"
 version = "0.2.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -354,6 +360,7 @@ name = "renderer"
 version = "0.1.0"
 dependencies = [
  "noise",
+ "obj",
  "rand 0.10.3",
  "raylib",
 ]

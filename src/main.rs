@@ -3,8 +3,15 @@ mod line;
 
 use framebuffer::Framebuffer;
 use line::line;
+use obj::Obj;
 use raylib::prelude::*;
 use std::f32::consts::PI;
+
+const MODEL_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/obj/nave.obj");
+
+fn load_obj_model() -> Obj {
+    Obj::load(MODEL_PATH).unwrap_or_else(|error| panic!("could not load {MODEL_PATH}: {error}"))
+}
 
 fn triangle(framebuffer: &mut Framebuffer, t1: Vector3, t2: Vector3, t3: Vector3) {
     line(framebuffer, t1, t2);
@@ -40,7 +47,13 @@ fn transform(
     new_vertex
 }
 
-fn render(framebuffer: &mut Framebuffer, translation: Vector3, scale: f32, rotation: f32) {
+fn render(
+    framebuffer: &mut Framebuffer,
+    translation: Vector3,
+    scale: f32,
+    rotation: f32,
+    model: &Obj,
+) {
     let v1 = Vector3::new(100.0, 100.0, 0.0);
     let v2 = Vector3::new(200.0, 100.0, 0.0);
     let v3 = Vector3::new(150.0, 200.0, 0.0);
@@ -66,6 +79,7 @@ fn main() {
     window.set_target_fps(60);
 
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
+    let model = load_obj_model();
 
     let mut translation = Vector3::new(0.0, 0.0, 0.0);
     let mut rotation = 0.0_f32;
@@ -102,7 +116,7 @@ fn main() {
         }
 
         framebuffer.clear();
-        render(&mut framebuffer, translation, scale, rotation);
+        render(&mut framebuffer, translation, scale, rotation, &model);
         framebuffer.swap_buffers(&mut window, &raylib_thread);
     }
 }
