@@ -10,11 +10,22 @@ use raylib::prelude::*;
 use std::f32::consts::PI;
 
 const MODEL_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/obj/nave.obj");
+const MOVE_SPEED: f32 = 2.0;
+const ROT_SPEED: f32 = PI / 10.0;
 
 fn triangle(framebuffer: &mut Framebuffer, t1: Vector3, t2: Vector3, t3: Vector3) {
     line(framebuffer, t1, t2);
     line(framebuffer, t2, t3);
     line(framebuffer, t3, t1);
+}
+
+fn matrix_mult(mat: Vec<Vector3>, vec: Vector3) -> Vector3 {
+    let mut result = Vector3::zero();
+    result.x += mat[0].x * vec.x + mat[0].y * vec.y + mat[0].z * vec.z;
+    result.y += mat[1].x * vec.x + mat[1].y * vec.y + mat[1].z * vec.z;
+    result.z += mat[2].x * vec.x + mat[2].y * vec.y + mat[2].z * vec.z;
+
+    result
 }
 
 fn transform(
@@ -25,23 +36,43 @@ fn transform(
     center: Vector3,
 ) -> Vector3 {
     let mut new_vertex = vertex;
-
     new_vertex -= center;
 
-    let cos_theta = (rotation * PI / 180.0).cos();
-    let sin_theta = (rotation * PI / 180.0).sin();
+    if rotation.x != 0.0 {
+        let (sin_theta, cos_theta) = rotation.x.sin_cos();
+        let rot_matrix: Vec<Vector3> = vec![
+            Vector3::new(1.0, 0.0, 0.0),
+            Vector3::new(0.0, cos_theta, -sin_theta),
+            Vector3::new(0.0, sin_theta, cos_theta),
+        ];
 
-    let rotated_x = new_vertex.x * cos_theta - new_vertex.y * sin_theta;
-    let rotated_y = new_vertex.x * sin_theta + new_vertex.y * cos_theta;
+        new_vertex = matrix_mult(rot_matrix, new_vertex);
+    }
 
-    new_vertex.x = rotated_x;
-    new_vertex.y = rotated_y;
+    if rotation.y != 0.0 {
+        let (sin_theta, cos_theta) = rotation.y.sin_cos();
+        let rot_matrix: Vec<Vector3> = vec![
+            Vector3::new(0.0, 1.0, 0.0),
+            Vector3::new(cos_theta, 0.0, -sin_theta),
+            Vector3::new(sin_theta, 0.0, cos_theta),
+        ];
+        new_vertex = matrix_mult(rot_matrix, new_vertex);
+    }
+
+    if rotation.z != 0.0 {
+        let (sin_theta, cos_theta) = rotation.z.sin_cos();
+        let rot_matrix: Vec<Vector3> = vec![
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(cos_theta, -sin_theta, 0.0),
+            Vector3::new(sin_theta, cos_theta, 0.0),
+        ];
+
+        new_vertex = matrix_mult(rot_matrix, new_vertex);
+    }
 
     new_vertex *= scale;
+
     new_vertex += translation;
-
-    new_vertex += center;
-
     new_vertex
 }
 
@@ -74,8 +105,6 @@ fn main() {
     let mut scale = 1.0_f32;
 
     while !window.window_should_close() {
-        const MOVE_SPEED: f32 = 2.0;
-
         if window.is_key_down(KeyboardKey::KEY_RIGHT) {
             translation.x += MOVE_SPEED;
         }
@@ -97,24 +126,24 @@ fn main() {
         }
 
         if window.is_key_down(KeyboardKey::KEY_A) {
-            rotation.x -= 2.0;
+            rotation.x -= ROT_SPEED;
         }
         if window.is_key_down(KeyboardKey::KEY_D) {
-            rotation.x += 2.0;
+            rotation.x += ROT_SPEED;
         }
 
         if window.is_key_down(KeyboardKey::KEY_W) {
-            rotation.y -= 2.0;
+            rotation.y -= ROT_SPEED;
         }
         if window.is_key_down(KeyboardKey::KEY_S) {
-            rotation.y += 2.0;
+            rotation.y += ROT_SPEED;
         }
 
         if window.is_key_down(KeyboardKey::KEY_Z) {
-            rotation.z -= 2.0;
+            rotation.z -= ROT_SPEED;
         }
         if window.is_key_down(KeyboardKey::KEY_X) {
-            rotation.z += 2.0;
+            rotation.z += ROT_SPEED;
         }
 
         framebuffer.clear();
