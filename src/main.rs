@@ -5,19 +5,13 @@ mod model;
 use framebuffer::Framebuffer;
 use line::line;
 use model::Model;
-use obj::Obj;
 use raylib::prelude::*;
 use std::f32::consts::PI;
 
 const MODEL_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/obj/nave.obj");
 const MOVE_SPEED: f32 = 0.1;
 const ROT_SPEED: f32 = PI / 100.0;
-
-fn triangle(framebuffer: &mut Framebuffer, t1: Vector3, t2: Vector3, t3: Vector3) {
-    line(framebuffer, t1, t2);
-    line(framebuffer, t2, t3);
-    line(framebuffer, t3, t1);
-}
+const PIXELS_PER_UNIT: f32 = 25.0;
 
 fn matrix_mult(mat: Vec<Vector3>, vec: Vector3) -> Vector3 {
     let mut result = Vector3::zero();
@@ -83,6 +77,25 @@ fn render(
     rotation: Vector3,
     model: &Model,
 ) {
+    let screen_center_x = framebuffer.width as f32 * 0.5;
+    let screen_center_y = framebuffer.height as f32 * 0.5;
+
+    let screen_vertices: Vec<Vector3> = model
+        .vertices
+        .iter()
+        .map(|vertex| transform(*vertex, translation, scale, rotation, model.center))
+        .map(|vertex| {
+            Vector3::new(
+                screen_center_x + vertex.x * PIXELS_PER_UNIT,
+                screen_center_y - vertex.y * PIXELS_PER_UNIT,
+                vertex.z,
+            )
+        })
+        .collect();
+
+    for &(first, second) in &model.edges {
+        line(framebuffer, screen_vertices[first], screen_vertices[second]);
+    }
 }
 
 fn main() {
@@ -126,17 +139,17 @@ fn main() {
         }
 
         if window.is_key_down(KeyboardKey::KEY_A) {
-            rotation.x -= ROT_SPEED;
+            rotation.y -= ROT_SPEED;
         }
         if window.is_key_down(KeyboardKey::KEY_D) {
-            rotation.x += ROT_SPEED;
+            rotation.y += ROT_SPEED;
         }
 
         if window.is_key_down(KeyboardKey::KEY_W) {
-            rotation.y -= ROT_SPEED;
+            rotation.x += ROT_SPEED;
         }
         if window.is_key_down(KeyboardKey::KEY_S) {
-            rotation.y += ROT_SPEED;
+            rotation.x -= ROT_SPEED;
         }
 
         if window.is_key_down(KeyboardKey::KEY_Z) {
