@@ -6,6 +6,7 @@ use std::path::Path;
 pub struct Model {
     pub vertices: Vec<Vector3>,
     pub edges: HashSet<(usize, usize)>,
+    pub triangles: Vec<[usize; 3]>,
     pub center: Vector3,
 }
 
@@ -27,10 +28,12 @@ impl Model {
 
         let center = Self::get_center(&vertices);
         let edges = Self::get_edges(&obj);
+        let triangles = Self::get_triangles(&obj);
 
         Self {
             vertices,
             edges,
+            triangles,
             center,
         }
     }
@@ -78,5 +81,24 @@ impl Model {
         }
 
         edges
+    }
+
+    pub fn get_triangles(obj: &Obj) -> Vec<[usize; 3]> {
+        let mut triangles = Vec::new();
+
+        for object in &obj.data.objects {
+            for group in &object.groups {
+                for polygon in &group.polys {
+                    let indices = &polygon.0;
+
+                    // Triangulate polygons as a fan: (0, 1, 2), (0, 2, 3), ...
+                    for index in 1..indices.len().saturating_sub(1) {
+                        triangles.push([indices[0].0, indices[index].0, indices[index + 1].0]);
+                    }
+                }
+            }
+        }
+
+        triangles
     }
 }

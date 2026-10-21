@@ -1,9 +1,11 @@
+mod algorithms;
 mod framebuffer;
 mod line;
 mod model;
 
+use algorithms::triangle::{Triangle, TrianglePipeline};
+use algorithms::wireframe::WireFrame;
 use framebuffer::Framebuffer;
-use line::line;
 use model::Model;
 use raylib::prelude::*;
 use std::f32::consts::PI;
@@ -76,6 +78,7 @@ fn render(
     scale: f32,
     rotation: Vector3,
     model: &Model,
+    pipeline: &dyn TrianglePipeline,
 ) {
     let screen_center_x = framebuffer.width as f32 * 0.5;
     let screen_center_y = framebuffer.height as f32 * 0.5;
@@ -93,8 +96,14 @@ fn render(
         })
         .collect();
 
-    for &(first, second) in &model.edges {
-        line(framebuffer, screen_vertices[first], screen_vertices[second]);
+    for &[first, second, third] in &model.triangles {
+        let triangle = Triangle::new(
+            screen_vertices[first],
+            screen_vertices[second],
+            screen_vertices[third],
+        );
+
+        pipeline.render(framebuffer, &triangle);
     }
 }
 
@@ -112,6 +121,7 @@ fn main() {
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
     let model = Model::load(MODEL_PATH)
         .unwrap_or_else(|error| panic!("Could not load {MODEL_PATH}: {error}"));
+    let wireframe = WireFrame;
 
     let mut translation = Vector3::new(0.0, 0.0, 0.0);
     let mut rotation = Vector3::new(0.0, 0.0, 0.0);
@@ -160,7 +170,14 @@ fn main() {
         }
 
         framebuffer.clear();
-        render(&mut framebuffer, translation, scale, rotation, &model);
+        render(
+            &mut framebuffer,
+            translation,
+            scale,
+            rotation,
+            &model,
+            &wireframe,
+        );
         framebuffer.swap_buffers(&mut window, &raylib_thread);
     }
 }
