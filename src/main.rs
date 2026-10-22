@@ -5,19 +5,37 @@ mod model;
 
 use algorithms::barycentric::FilledBarycentric;
 use algorithms::scanline::FilledScanline;
-use algorithms::triangle::{Triangle, TriangleMode, TrianglePipeline};
+use algorithms::triangle::{Fragment, Triangle, TriangleMode, TrianglePipeline};
 use algorithms::wireframe::WireFrame;
 use framebuffer::Framebuffer;
-use model::Model;
 use raylib::prelude::*;
 use std::f32::consts::PI;
+use std::fs;
 use std::hint::black_box;
-use std::time::Instant;
+use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 const MODEL_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/obj/nave.obj");
 const MOVE_SPEED: f32 = 0.1;
 const ROT_SPEED: f32 = PI / 100.0;
 const PIXELS_PER_UNIT: f32 = 25.0;
+const BENCHMARK_ITERATIONS: usize = 100;
+const BENCHMARK_REPETITIONS: usize = 7;
+const SCREENSHOT_DIRECTORY: &str = "screenshots/triangles";
+const TEST_GROUP_NAMES: [&str; 4] = [
+    "small_and_large",
+    "horizontal_and_vertical_edges",
+    "original_and_reversed_winding",
+    "partially_outside_and_collinear",
+];
+
+#[derive(Debug)]
+struct BenchmarkResult {
+    algorithm: &'static str,
+    median: Duration,
+    iterations: usize,
+    fragments_per_iteration: usize,
+}
 
 fn matrix_mult(mat: Vec<Vector3>, vec: Vector3) -> Vector3 {
     let mut result = Vector3::zero();
@@ -76,15 +94,8 @@ fn transform(
     new_vertex
 }
 
-fn render(
-    framebuffer: &mut Framebuffer,
-    _translation: Vector3,
-    _scale: f32,
-    _rotation: Vector3,
-    _model: &Model,
-    pipeline: &dyn TrianglePipeline,
-) {
-    let triangles = vec![
+fn test_triangle_groups() -> Vec<Vec<Triangle>> {
+    vec![
         // pequeño y grande
         vec![
             Triangle::new(
@@ -137,15 +148,138 @@ fn render(
                 Vector3::new(700.0, 570.0, 0.0),
             ),
         ],
-        // vértices en misma línea
-    ];
+    ]
+}
 
-    for tri in &triangles[3] {
-        pipeline.render(framebuffer, tri);
+fn render(
+    framebuffer: &mut Framebuffer,
+    triangle_groups: &[Vec<Triangle>],
+    pipeline: &dyn TrianglePipeline,
+) {
+    for triangle in triangle_groups.iter().flatten() {
+        pipeline.render(framebuffer, triangle);
+    }
+}
+
+fn render_test_screenshots(
+    framebuffer: &mut Framebuffer,
+    window: &mut RaylibHandle,
+    raylib_thread: &RaylibThread,
+    triangle_groups: &[Vec<Triangle>],
+    pipelines: &[(&str, &dyn TrianglePipeline)],
+) -> std::io::Result<Vec<PathBuf>> {
+    if triangle_groups.len() != TEST_GROUP_NAMES.len() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "every triangle test group must have a corresponding scenario name",
+        ));
+    }
+
+    let output_directory = PathBuf::from(SCREENSHOT_DIRECTORY);
+    fs::create_dir_all(&output_directory)?;
+    let mut screenshots = Vec::with_capacity(triangle_groups.len() * pipelines.len());
+
+    for (method_name, pipeline) in pipelines {
+        for (scenario_name, triangles) in TEST_GROUP_NAMES.iter().zip(triangle_groups) {
+            framebuffer.clear();
+
+            for triangle in triangles {
+                pipeline.render(framebuffer, triangle);
+            }
+
+            // Show the same framebuffer that is about to be exported.
+            framebuffer.swap_buffers(window, raylib_thread);
+
+            let file_path = output_directory.join(format!("{scenario_name}__{method_name}.png"));
+            framebuffer.render_to_file(file_path.to_string_lossy().as_ref());
+            println!("Saved {}", file_path.display());
+            screenshots.push(file_path);
+        }
+    }
+
+    Ok(screenshots)
+}
+
+fn benchmark_rasterizer<F>(
+    algorithm: &'static str,
+    triangle_groups: &[Vec<Triangle>],
+    mut rasterize: F,
+) -> BenchmarkResult
+where
+    F: FnMut(&Triangle) -> Vec<Fragment>,
+{
+    let fragments_per_iteration = triangle_groups
+        .iter()
+        .flatten()
+        .map(|triangle| rasterize(black_box(triangle)).len())
+        .sum();
+
+    let mut samples = Vec::with_capacity(BENCHMARK_REPETITIONS);
+
+    for _ in 0..BENCHMARK_REPETITIONS {
+        let start = Instant::now();
+        let mut generated_fragments = 0_usize;
+
+        for _ in 0..BENCHMARK_ITERATIONS {
+            for triangle in black_box(triangle_groups).iter().flatten() {
+                let fragments = rasterize(black_box(triangle));
+                generated_fragments += fragments.len();
+                black_box(fragments);
+            }
+        }
+
+        black_box(generated_fragments);
+        samples.push(start.elapsed());
+    }
+
+    samples.sort_unstable();
+
+    BenchmarkResult {
+        algorithm,
+        median: samples[samples.len() / 2],
+        iterations: BENCHMARK_ITERATIONS,
+        fragments_per_iteration,
+    }
+}
+
+fn benchmark_triangles(triangle_groups: &[Vec<Triangle>]) -> Vec<BenchmarkResult> {
+    let barycentric = FilledBarycentric;
+    let scanline = FilledScanline;
+
+    vec![
+        benchmark_rasterizer("barycentric", triangle_groups, |triangle| {
+            barycentric.rasterize(triangle)
+        }),
+        benchmark_rasterizer("scanline", triangle_groups, |triangle| {
+            scanline.rasterize(triangle)
+        }),
+    ]
+}
+
+fn print_benchmark_results(results: &[BenchmarkResult]) {
+    println!("Triangle rasterization benchmark");
+
+    for result in results {
+        println!(
+            "{}: median {:?} for {} iterations; {} fragments per iteration",
+            result.algorithm, result.median, result.iterations, result.fragments_per_iteration,
+        );
     }
 }
 
 fn main() {
+    let triangle_groups = test_triangle_groups();
+    let arguments: Vec<String> = std::env::args().collect();
+
+    if arguments
+        .iter()
+        .any(|argument| argument == "--benchmark-triangles")
+    {
+        let results = benchmark_triangles(&triangle_groups);
+        print_benchmark_results(&results);
+        return;
+    }
+
     let window_width = 800;
     let window_height = 600;
 
@@ -157,12 +291,36 @@ fn main() {
     window.set_target_fps(60);
 
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
-    let model = Model::load(MODEL_PATH)
-        .unwrap_or_else(|error| panic!("Could not load {MODEL_PATH}: {error}"));
 
     let wireframe = WireFrame;
     let scanline = FilledScanline;
     let barycentric = FilledBarycentric;
+
+    if arguments
+        .iter()
+        .any(|argument| argument == "--capture-triangles")
+    {
+        let pipelines: [(&str, &dyn TrianglePipeline); 3] = [
+            ("wireframe", &wireframe),
+            ("filled_barycentric", &barycentric),
+            ("filled_scanline", &scanline),
+        ];
+
+        let screenshots = render_test_screenshots(
+            &mut framebuffer,
+            &mut window,
+            &raylib_thread,
+            &triangle_groups,
+            &pipelines,
+        )
+        .expect("could not save triangle test screenshots");
+
+        println!(
+            "Saved {} triangle screenshots under {SCREENSHOT_DIRECTORY}",
+            screenshots.len()
+        );
+        return;
+    }
 
     let mode = TriangleMode::FilledScanline;
     let pipeline: &dyn TrianglePipeline = match mode {
@@ -170,10 +328,6 @@ fn main() {
         TriangleMode::FilledBarycentric => &barycentric,
         TriangleMode::FilledScanline => &scanline,
     };
-
-    let translation = Vector3::new(0.0, 0.0, 0.0);
-    let rotation = Vector3::new(0.0, 0.0, 0.0);
-    let scale = 1.0_f32;
 
     while !window.window_should_close() {
         /*
@@ -221,14 +375,7 @@ fn main() {
 
         framebuffer.clear();
 
-        render(
-            &mut framebuffer,
-            translation,
-            scale,
-            rotation,
-            &model,
-            pipeline,
-        );
+        render(&mut framebuffer, &triangle_groups, pipeline);
 
         framebuffer.swap_buffers(&mut window, &raylib_thread);
     }

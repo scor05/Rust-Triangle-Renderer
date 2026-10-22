@@ -2,7 +2,7 @@
 
 ## Descripción y Estructura del Código
 
-En este repositorio se encuentra mi código realizado para el renderer de modelos .obj en Rust, el cual toma un archivo .obj y lo renderiza en pantalla utilizando los triángulos del objeto.
+En este repositorio se encuentra mi código realizado para el renderer de modelos .obj en Rust, el cual toma un archivo .obj y lo renderiza en pantalla utilizando los triángulos del objeto. Actualmente el código está configuardo únicamente para renderizar los triángulos para el laboratorio #5, por lo que el .obj anterior ya no se utiliza.
 
 El código está estructurado de la siguiente forma:
 
@@ -12,8 +12,30 @@ El código está estructurado de la siguiente forma:
 │       └── nave.obj
 ├── Cargo.lock
 ├── Cargo.toml
+├── flamegraph.svg
+├── perf.data
 ├── README.md
+├── screenshots
+│   └── triangles
+│       ├── horizontal_and_vertical_edges__filled_barycentric.png
+│       ├── horizontal_and_vertical_edges__filled_scanline.png
+│       ├── horizontal_and_vertical_edges__wireframe.png
+│       ├── original_and_reversed_winding__filled_barycentric.png
+│       ├── original_and_reversed_winding__filled_scanline.png
+│       ├── original_and_reversed_winding__wireframe.png
+│       ├── partially_outside_and_collinear__filled_barycentric.png
+│       ├── partially_outside_and_collinear__filled_scanline.png
+│       ├── partially_outside_and_collinear__wireframe.png
+│       ├── small_and_large__filled_barycentric.png
+│       ├── small_and_large__filled_scanline.png
+│       └── small_and_large__wireframe.png
 └── src
+    ├── algorithms
+    │   ├── barycentric.rs
+    │   ├── mod.rs
+    │   ├── scanline.rs
+    │   ├── triangle.rs
+    │   └── wireframe.rs
     ├── framebuffer.rs
     ├── line.rs
     ├── main.rs
@@ -27,7 +49,7 @@ En `./assets/obj/nave.obj` está el objeto que yo utilicé para tomar la captura
 El proyecto está diseñado para que se pueda ejecutar el código desde la carpeta raíz del repositorio con
 
 ```bash
-cargo run
+cargo run --release
 ```
 
 Y al ejecutar eso se debería de ver una ventana con el modelo .obj similar a esta:
