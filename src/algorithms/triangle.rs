@@ -1,6 +1,15 @@
 use crate::framebuffer::Framebuffer;
 use raylib::prelude::Vector3;
 
+pub const COVERAGE_EPSILON: f32 = 1.0e-5;
+
+#[derive(Clone, Copy)]
+pub enum TriangleMode {
+    Wireframe,
+    FilledBarycentric,
+    FilledScanline,
+}
+
 #[derive(Clone, Copy)]
 pub struct Triangle {
     pub vertices: [Vector3; 3],

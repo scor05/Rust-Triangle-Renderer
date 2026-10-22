@@ -5,12 +5,14 @@ mod model;
 
 use algorithms::barycentric::FilledBarycentric;
 use algorithms::scanline::FilledScanline;
-use algorithms::triangle::{Triangle, TrianglePipeline};
+use algorithms::triangle::{Triangle, TriangleMode, TrianglePipeline};
 use algorithms::wireframe::WireFrame;
 use framebuffer::Framebuffer;
 use model::Model;
 use raylib::prelude::*;
 use std::f32::consts::PI;
+use std::hint::black_box;
+use std::time::Instant;
 
 const MODEL_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/obj/nave.obj");
 const MOVE_SPEED: f32 = 0.1;
@@ -76,36 +78,70 @@ fn transform(
 
 fn render(
     framebuffer: &mut Framebuffer,
-    translation: Vector3,
-    scale: f32,
-    rotation: Vector3,
-    model: &Model,
+    _translation: Vector3,
+    _scale: f32,
+    _rotation: Vector3,
+    _model: &Model,
     pipeline: &dyn TrianglePipeline,
 ) {
-    let screen_center_x = framebuffer.width as f32 * 0.5;
-    let screen_center_y = framebuffer.height as f32 * 0.5;
+    let triangles = vec![
+        // pequeño y grande
+        vec![
+            Triangle::new(
+                Vector3::new(40.0, 40.0, 0.0),
+                Vector3::new(90.0, 50.0, 0.0),
+                Vector3::new(60.0, 90.0, 0.0),
+            ),
+            Triangle::new(
+                Vector3::new(300.0, 40.0, 0.0),
+                Vector3::new(740.0, 100.0, 0.0),
+                Vector3::new(560.0, 350.0, 0.0),
+            ),
+        ],
+        // borde horizontal y vertical
+        vec![
+            Triangle::new(
+                Vector3::new(50.0, 160.0, 0.0),
+                Vector3::new(180.0, 160.0, 0.0),
+                Vector3::new(110.0, 270.0, 0.0),
+            ),
+            Triangle::new(
+                Vector3::new(220.0, 160.0, 0.0),
+                Vector3::new(220.0, 300.0, 0.0),
+                Vector3::new(360.0, 230.0, 0.0),
+            ),
+        ],
+        // tres vértices y en orden inverso
+        vec![
+            Triangle::new(
+                Vector3::new(420.0, 400.0, 0.0),
+                Vector3::new(520.0, 420.0, 0.0),
+                Vector3::new(460.0, 500.0, 0.0),
+            ),
+            Triangle::new(
+                Vector3::new(460.0, 500.0, 0.0),
+                Vector3::new(520.0, 420.0, 0.0),
+                Vector3::new(420.0, 400.0, 0.0),
+            ),
+        ],
+        // afuera del buffer y en misma línea
+        vec![
+            Triangle::new(
+                Vector3::new(-60.0, 340.0, 0.0),
+                Vector3::new(150.0, 380.0, 0.0),
+                Vector3::new(30.0, 550.0, 0.0),
+            ),
+            Triangle::new(
+                Vector3::new(500.0, 520.0, 0.0),
+                Vector3::new(600.0, 545.0, 0.0),
+                Vector3::new(700.0, 570.0, 0.0),
+            ),
+        ],
+        // vértices en misma línea
+    ];
 
-    let screen_vertices: Vec<Vector3> = model
-        .vertices
-        .iter()
-        .map(|vertex| transform(*vertex, translation, scale, rotation, model.center))
-        .map(|vertex| {
-            Vector3::new(
-                screen_center_x + vertex.x * PIXELS_PER_UNIT,
-                screen_center_y - vertex.y * PIXELS_PER_UNIT,
-                vertex.z,
-            )
-        })
-        .collect();
-
-    for &[first, second, third] in &model.triangles {
-        let triangle = Triangle::new(
-            screen_vertices[first],
-            screen_vertices[second],
-            screen_vertices[third],
-        );
-
-        pipeline.render(framebuffer, &triangle);
+    for tri in &triangles[3] {
+        pipeline.render(framebuffer, tri);
     }
 }
 
@@ -113,31 +149,34 @@ fn main() {
     let window_width = 800;
     let window_height = 600;
 
-    /*
     let (mut window, raylib_thread) = raylib::init()
         .size(window_width, window_height)
         .title("Triangle Renderer")
         .log_level(TraceLogLevel::LOG_WARNING)
         .build();
     window.set_target_fps(60);
-    */
 
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
-    /*
     let model = Model::load(MODEL_PATH)
         .unwrap_or_else(|error| panic!("Could not load {MODEL_PATH}: {error}"));
-    */
 
     let wireframe = WireFrame;
     let scanline = FilledScanline;
     let barycentric = FilledBarycentric;
 
-    /*
-    let mut translation = Vector3::new(0.0, 0.0, 0.0);
-    let mut rotation = Vector3::new(0.0, 0.0, 0.0);
-    let mut scale = 1.0_f32;
+    let mode = TriangleMode::FilledScanline;
+    let pipeline: &dyn TrianglePipeline = match mode {
+        TriangleMode::Wireframe => &wireframe,
+        TriangleMode::FilledBarycentric => &barycentric,
+        TriangleMode::FilledScanline => &scanline,
+    };
+
+    let translation = Vector3::new(0.0, 0.0, 0.0);
+    let rotation = Vector3::new(0.0, 0.0, 0.0);
+    let scale = 1.0_f32;
 
     while !window.window_should_close() {
+        /*
         if window.is_key_down(KeyboardKey::KEY_RIGHT) {
             translation.x += MOVE_SPEED;
         }
@@ -178,17 +217,19 @@ fn main() {
         if window.is_key_down(KeyboardKey::KEY_X) {
             rotation.z += ROT_SPEED;
         }
+        */
 
         framebuffer.clear();
+
         render(
             &mut framebuffer,
             translation,
             scale,
             rotation,
             &model,
-            &wireframe,
+            pipeline,
         );
+
         framebuffer.swap_buffers(&mut window, &raylib_thread);
     }
-    */
 }

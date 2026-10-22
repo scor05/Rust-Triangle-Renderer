@@ -1,4 +1,4 @@
-use super::triangle::{Fragment, Triangle, TrianglePipeline};
+use super::triangle::{COVERAGE_EPSILON, Fragment, Triangle, TrianglePipeline};
 use crate::framebuffer::Framebuffer;
 use raylib::prelude::Vector3;
 
@@ -30,7 +30,10 @@ impl FilledBarycentric {
                 let beta = edge_function(third, first, sample_x, sample_y) / area;
                 let gamma = edge_function(first, second, sample_x, sample_y) / area;
 
-                if alpha >= 0.0 && beta >= 0.0 && gamma >= 0.0 {
+                if alpha >= -COVERAGE_EPSILON
+                    && beta >= -COVERAGE_EPSILON
+                    && gamma >= -COVERAGE_EPSILON
+                {
                     fragments.push(Fragment { x, y });
                 }
             }
