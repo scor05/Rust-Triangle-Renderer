@@ -3,6 +3,8 @@ mod framebuffer;
 mod line;
 mod model;
 
+use algorithms::barycentric::FilledBarycentric;
+use algorithms::scanline::FilledScanline;
 use algorithms::triangle::{Triangle, TrianglePipeline};
 use algorithms::wireframe::WireFrame;
 use framebuffer::Framebuffer;
@@ -111,18 +113,26 @@ fn main() {
     let window_width = 800;
     let window_height = 600;
 
+    /*
     let (mut window, raylib_thread) = raylib::init()
         .size(window_width, window_height)
         .title("Triangle Renderer")
         .log_level(TraceLogLevel::LOG_WARNING)
         .build();
     window.set_target_fps(60);
+    */
 
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
+    /*
     let model = Model::load(MODEL_PATH)
         .unwrap_or_else(|error| panic!("Could not load {MODEL_PATH}: {error}"));
-    let wireframe = WireFrame;
+    */
 
+    let wireframe = WireFrame;
+    let scanline = FilledScanline;
+    let barycentric = FilledBarycentric;
+
+    /*
     let mut translation = Vector3::new(0.0, 0.0, 0.0);
     let mut rotation = Vector3::new(0.0, 0.0, 0.0);
     let mut scale = 1.0_f32;
@@ -180,4 +190,5 @@ fn main() {
         );
         framebuffer.swap_buffers(&mut window, &raylib_thread);
     }
+    */
 }

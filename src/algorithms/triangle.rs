@@ -14,6 +14,12 @@ impl Triangle {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct Fragment {
+    pub x: i32,
+    pub y: i32,
+}
+
 pub trait TrianglePipeline {
     fn render(&self, framebuffer: &mut Framebuffer, triangle: &Triangle);
 }
